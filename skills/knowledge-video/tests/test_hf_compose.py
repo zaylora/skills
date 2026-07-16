@@ -25,6 +25,18 @@ def test_hf_render_highlight_escapes_plain_and_highlight_content():
     )
 
 
+def test_hf_render_highlight_wraps_each_highlight_marker_separately():
+    assert knowledge_video._hf_render_highlight("==a== ... ==b==") == (
+        '<span class="amber">a</span> ... <span class="amber">b</span>'
+    )
+
+
+def test_hf_render_highlight_escapes_html_characters_inside_a_highlight():
+    assert knowledge_video._hf_render_highlight('==& <>"==') == (
+        '<span class="amber">&amp; &lt;&gt;&quot;</span>'
+    )
+
+
 def test_hf_helpers_treat_none_as_an_empty_string():
     assert knowledge_video._hf_escape(None) == ""
     assert knowledge_video._hf_render_highlight(None) == ""
