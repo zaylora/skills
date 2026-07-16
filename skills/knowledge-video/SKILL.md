@@ -25,6 +25,8 @@ pip install -r skills/knowledge-video/requirements.txt
 
 还需要 `ffmpeg`（`brew install ffmpeg` / `choco install ffmpeg`）。
 
+`hf-prepare` 和 `hf-compose` 是独立的 Python 命令：生成 `timeline.json` 与 `index.html` 时不需要安装 Node.js 或 HyperFrames。只有选择路径 A 渲染、检查或出片时，才需要通过 `npx hyperframes` 调用 HyperFrames。
+
 **渲染引擎（二选一）：**
 - **路径 A（推荐）hyperframes**：需 **Node.js 22+**，用 `npx hyperframes` 免安装调用，首次 `npx hyperframes browser ensure` 备好渲染 Chrome
 - **路径 B（fallback）Playwright**：`playwright install chromium`（无 Node 环境时用）
