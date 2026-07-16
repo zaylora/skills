@@ -1,0 +1,10 @@
+# 视觉伴侣（brainstorming）临时文件
+.superpowers/
+
+# 视频生成产物
+out/
+
+# 依赖
+node_modules/
+__pycache__/
+*.pyc
