@@ -991,6 +991,61 @@ def cmd_assemble(args):
 
 # ── Subcommand: hf-prepare (hyperframes 渲染准备) ────────────────
 
+def collect_hf_segments(slides, work_dir, hf_dir) -> list[dict]:
+    """Collect HyperFrames scene metadata and copy referenced local images."""
+    import shutil
+
+    work_dir = Path(work_dir)
+    hf_dir = Path(hf_dir)
+    segments: list[dict] = []
+
+    def add_image(segment: dict, image: str):
+        if not image:
+            return
+        source = work_dir / image
+        if not source.is_file():
+            print(f"  [warn] 缺图片 {image}，使用文字布局")
+            return
+        destination = hf_dir / "assets" / "images" / source.name
+        if not destination.exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+        segment["image"] = f"assets/images/{source.name}"
+
+    def add_segment(slide: SlideData, **extra):
+        segment = {
+            "index": len(segments),
+            "type": slide.type,
+            "slide_title": slide.title,
+            "icon": slide.icon,
+            "start": 0.0,
+            "duration": 0.0,
+            "audio": "",
+        }
+        segment.update(extra)
+        segments.append(segment)
+        return segment
+
+    for slide in slides:
+        if slide.type == "title":
+            add_segment(slide, subtitle=slide.subtitle, narration=slide.narration)
+        elif slide.type == "content":
+            for key_point in slide.key_points:
+                segment = add_segment(
+                    slide, text=key_point.text, narration=key_point.narration
+                )
+                add_image(segment, key_point.image)
+        elif slide.type == "summary":
+            segment = add_segment(
+                slide,
+                points=[key_point.text for key_point in slide.key_points],
+                narration=slide.narration,
+            )
+            add_image(segment, slide.image)
+
+    return segments
+
+
 def _ffprobe_duration(path: Path) -> float:
     """返回音频时长（秒）。"""
     import subprocess
