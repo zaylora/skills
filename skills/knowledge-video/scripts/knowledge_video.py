@@ -105,10 +105,10 @@ def _hf_escape(s: str) -> str:
 
 def _hf_render_highlight(s: str) -> str:
     s = "" if s is None else s
-    parts = re.split(r"(==.*?==)", s)
+    parts = re.split(r"(==.+?==)", s)
     return "".join(
         f'<span class="amber">{_hf_escape(part[2:-2])}</span>'
-        if part.startswith("==") and part.endswith("==")
+        if re.fullmatch(r"==.+?==", part)
         else _hf_escape(part)
         for part in parts
     )

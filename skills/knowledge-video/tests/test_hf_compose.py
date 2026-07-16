@@ -37,6 +37,13 @@ def test_hf_render_highlight_escapes_html_characters_inside_a_highlight():
     )
 
 
+def test_hf_render_highlight_leaves_empty_markers_unhighlighted():
+    assert knowledge_video._hf_render_highlight("====") == "===="
+    assert knowledge_video._hf_render_highlight("==text==") == (
+        '<span class="amber">text</span>'
+    )
+
+
 def test_hf_helpers_treat_none_as_an_empty_string():
     assert knowledge_video._hf_escape(None) == ""
     assert knowledge_video._hf_render_highlight(None) == ""
