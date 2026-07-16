@@ -1,4 +1,7 @@
+import argparse
 import importlib.util
+import json
+from types import SimpleNamespace
 from pathlib import Path
 
 
@@ -273,6 +276,68 @@ def test_collect_hf_segments_preserves_conflicting_existing_output(tmp_path):
     assert segments[0]["image"] != "assets/images/photo.png"
     assert existing.read_bytes() == b"existing"
     assert (hf_dir / segments[0]["image"]).read_bytes() == b"source"
+
+
+def test_hf_prepare_uses_eligible_audio_segments_with_content_image(tmp_path, monkeypatch):
+    work_dir = tmp_path / "work"
+    audio_dir = work_dir / "audio"
+    audio_dir.mkdir(parents=True)
+    (work_dir / "content.png").write_bytes(b"content image")
+    (audio_dir / "slide-01.mp3").write_bytes(b"title audio")
+    (audio_dir / "slide-02b.mp3").write_bytes(b"content audio")
+    slides_path = work_dir / "slides.json"
+    slides_path.write_text(json.dumps({
+        "title": "视频标题",
+        "slides": [
+            {
+                "type": "title",
+                "title": "开场",
+                "subtitle": "副标题",
+                "narration": "标题旁白",
+            },
+            {
+                "type": "content",
+                "title": "内容",
+                "key_points": [
+                    {"text": "没有旁白的要点"},
+                    {
+                        "text": "带图片的要点",
+                        "narration": "内容旁白",
+                        "image": "content.png",
+                    },
+                ],
+            },
+        ],
+    }, ensure_ascii=False), encoding="utf-8")
+    durations = {"slide-01.mp3": 1.25, "slide-02b.mp3": 2.5}
+    monkeypatch.setattr(
+        knowledge_video, "_ffprobe_duration", lambda path: durations[path.name]
+    )
+
+    def fake_run(command, **_kwargs):
+        Path(command[-1]).write_bytes(b"concatenated narration")
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(knowledge_video.subprocess, "run", fake_run)
+    hf_dir = tmp_path / "hf"
+
+    knowledge_video.cmd_hf_prepare(argparse.Namespace(
+        json=str(slides_path), work_dir=str(work_dir), hf_dir=str(hf_dir),
+    ))
+
+    timeline = json.loads((hf_dir / "timeline.json").read_text(encoding="utf-8"))
+    assert timeline["title"] == "视频标题"
+    assert timeline["total_duration"] == 3.75
+    assert [(segment["audio"], segment["start"], segment["duration"])
+            for segment in timeline["segments"]] == [
+        ("slide-01.mp3", 0.0, 1.25),
+        ("slide-02b.mp3", 1.25, 2.5),
+    ]
+    assert timeline["segments"][0]["subtitle"] == "副标题"
+    assert timeline["segments"][1]["text"] == "带图片的要点"
+    assert timeline["segments"][1]["image"] == "assets/images/content.png"
+    assert (hf_dir / "assets" / "images" / "content.png").read_bytes() == b"content image"
+    assert (hf_dir / "assets" / "narration.mp3").read_bytes() == b"concatenated narration"
 
 
 def test_compose_hf_html_builds_deterministic_timed_scenes_with_audio_and_image():

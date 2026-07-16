@@ -1215,43 +1215,53 @@ def cmd_hf_prepare(args):
     assets_dir = hf_dir / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
 
+    prepared_segments = collect_hf_segments(slides, Path(args.work_dir), hf_dir)
     segments: list[dict] = []
     mp3_paths: list[Path] = []
     cursor = 0.0
 
-    def _add(mp3: Path, meta: dict):
+    def _add(mp3: Path, segment: dict):
         nonlocal cursor
         if not mp3.exists():
             print(f"  [warn] 缺音频 {mp3.name}，跳过", file=sys.stderr)
             return
         dur = _ffprobe_duration(mp3)
-        seg = {"index": len(segments), "audio": mp3.name,
-               "start": round(cursor, 3), "duration": round(dur, 3)}
-        seg.update(meta)
+        seg = dict(segment)
+        seg.update({"index": len(segments), "audio": mp3.name,
+                    "start": round(cursor, 3), "duration": round(dur, 3)})
         segments.append(seg)
         mp3_paths.append(mp3)
         cursor += dur
 
     # 音频段枚举规则与 _do_tts_xskill 完全一致
+    prepared_index = 0
     for idx, s in enumerate(slides):
         num = idx + 1
+        if s.type == "content":
+            slide_segments = prepared_segments[prepared_index:prepared_index + len(s.key_points)]
+            prepared_index += len(s.key_points)
+        else:
+            slide_segments = prepared_segments[prepared_index:prepared_index + 1]
+            prepared_index += 1
         has_sub = any(kp.narration for kp in s.key_points)
         if has_sub:
             for ki, kp in enumerate(s.key_points):
                 if not kp.narration.strip():
                     continue
-                _add(audio_dir / f"slide-{num:02d}{chr(97 + ki)}.mp3", {
-                    "type": s.type, "slide_title": s.title, "icon": s.icon,
-                    "text": kp.text, "narration": kp.narration,
-                })
+                if s.type == "content" and ki < len(slide_segments):
+                    segment = slide_segments[ki]
+                elif slide_segments:
+                    segment = slide_segments[0]
+                else:
+                    segment = {"type": s.type, "slide_title": s.title, "icon": s.icon,
+                               "text": kp.text, "narration": kp.narration}
+                _add(audio_dir / f"slide-{num:02d}{chr(97 + ki)}.mp3", segment)
         elif s.narration.strip():
-            meta = {"type": s.type, "slide_title": s.title, "icon": s.icon,
-                    "narration": s.narration}
-            if s.type == "title":
-                meta["subtitle"] = s.subtitle
-            if s.type == "summary":
-                meta["points"] = [kp.text for kp in s.key_points]
-            _add(audio_dir / f"slide-{num:02d}.mp3", meta)
+            segment = slide_segments[0] if slide_segments else {
+                "type": s.type, "slide_title": s.title, "icon": s.icon,
+                "narration": s.narration,
+            }
+            _add(audio_dir / f"slide-{num:02d}.mp3", segment)
 
     if not mp3_paths:
         print("错误: audio/ 下没有找到任何音频段，请先运行 tts", file=sys.stderr)
@@ -1284,8 +1294,7 @@ def cmd_hf_prepare(args):
 
     print(f"  ✓ 旁白轨 → {narration}  （{total}s，{n} 段拼接）")
     print(f"  ✓ 时间轴 → {hf_dir / 'timeline.json'}")
-    print(f"  下一步：参照 references/hyperframes-composition.html 写 {hf_dir}/index.html，")
-    print(f"          按 timeline.json 每段 start/duration 编排场景，再 npm run check && npm run render")
+    print(f"  下一步：运行 hf-compose --timeline {hf_dir / 'timeline.json'} --hf-dir {hf_dir}")
 
 
 def main():
