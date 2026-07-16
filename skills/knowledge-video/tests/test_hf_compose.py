@@ -141,3 +141,74 @@ def test_collect_hf_segments_skips_missing_images(tmp_path, capsys):
 
     assert "image" not in segments[0]
     assert "[warn]" in capsys.readouterr().out
+
+
+def test_collect_hf_segments_rejects_parent_directory_images(tmp_path, capsys):
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (tmp_path / "outside.png").write_bytes(b"outside")
+    slides = [knowledge_video.SlideData(
+        type="content", title="内容", key_points=[
+            knowledge_video.KeyPoint(text="要点", image="../outside.png"),
+        ]
+    )]
+
+    segments = knowledge_video.collect_hf_segments(slides, work_dir, tmp_path / "hf")
+
+    assert "image" not in segments[0]
+    assert "[warn]" in capsys.readouterr().out
+
+
+def test_collect_hf_segments_rejects_absolute_images(tmp_path, capsys):
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"outside")
+    slides = [knowledge_video.SlideData(
+        type="content", title="内容", key_points=[
+            knowledge_video.KeyPoint(text="要点", image=str(outside)),
+        ]
+    )]
+
+    segments = knowledge_video.collect_hf_segments(slides, tmp_path / "work", tmp_path / "hf")
+
+    assert "image" not in segments[0]
+    assert "[warn]" in capsys.readouterr().out
+
+
+def test_collect_hf_segments_disambiguates_same_basename_sources(tmp_path):
+    (tmp_path / "first").mkdir()
+    (tmp_path / "second").mkdir()
+    (tmp_path / "first" / "photo.png").write_bytes(b"first")
+    (tmp_path / "second" / "photo.png").write_bytes(b"second")
+    slides = [knowledge_video.SlideData(
+        type="content", title="内容", key_points=[
+            knowledge_video.KeyPoint(text="第一张", image="first/photo.png"),
+            knowledge_video.KeyPoint(text="第二张", image="second/photo.png"),
+        ]
+    )]
+    hf_dir = tmp_path / "hf"
+
+    segments = knowledge_video.collect_hf_segments(slides, tmp_path, hf_dir)
+
+    assert segments[0]["image"] == "assets/images/photo.png"
+    assert segments[1]["image"] != segments[0]["image"]
+    assert (hf_dir / segments[0]["image"]).read_bytes() == b"first"
+    assert (hf_dir / segments[1]["image"]).read_bytes() == b"second"
+
+
+def test_collect_hf_segments_preserves_conflicting_existing_output(tmp_path):
+    (tmp_path / "photo.png").write_bytes(b"source")
+    hf_dir = tmp_path / "hf"
+    existing = hf_dir / "assets" / "images" / "photo.png"
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b"existing")
+    slides = [knowledge_video.SlideData(
+        type="content", title="内容", key_points=[
+            knowledge_video.KeyPoint(text="要点", image="photo.png"),
+        ]
+    )]
+
+    segments = knowledge_video.collect_hf_segments(slides, tmp_path, hf_dir)
+
+    assert segments[0]["image"] != "assets/images/photo.png"
+    assert existing.read_bytes() == b"existing"
+    assert (hf_dir / segments[0]["image"]).read_bytes() == b"source"

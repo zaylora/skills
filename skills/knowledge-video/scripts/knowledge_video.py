@@ -993,24 +993,47 @@ def cmd_assemble(args):
 
 def collect_hf_segments(slides, work_dir, hf_dir) -> list[dict]:
     """Collect HyperFrames scene metadata and copy referenced local images."""
+    import hashlib
     import shutil
 
-    work_dir = Path(work_dir)
+    work_dir = Path(work_dir).resolve()
     hf_dir = Path(hf_dir)
     segments: list[dict] = []
+
+    def files_match(first: Path, second: Path) -> bool:
+        if first.stat().st_size != second.stat().st_size:
+            return False
+        return hashlib.sha256(first.read_bytes()).digest() == hashlib.sha256(second.read_bytes()).digest()
 
     def add_image(segment: dict, image: str):
         if not image:
             return
-        source = work_dir / image
+        image_path = Path(image)
+        if image_path.is_absolute():
+            print(f"  [warn] 图片路径必须相对工作目录: {image}，使用文字布局")
+            return
+        source = (work_dir / image_path).resolve()
+        try:
+            relative_source = source.relative_to(work_dir)
+        except ValueError:
+            print(f"  [warn] 图片路径越出工作目录: {image}，使用文字布局")
+            return
         if not source.is_file():
             print(f"  [warn] 缺图片 {image}，使用文字布局")
             return
         destination = hf_dir / "assets" / "images" / source.name
+        if destination.exists() and not files_match(source, destination):
+            path_hash = hashlib.sha256(relative_source.as_posix().encode("utf-8")).hexdigest()[:12]
+            destination = destination.with_name(f"{path_hash}-{source.name}")
+            if destination.exists() and not files_match(source, destination):
+                content_hash = hashlib.sha256(source.read_bytes()).hexdigest()[:12]
+                destination = destination.with_name(
+                    f"{path_hash}-{content_hash}-{source.name}"
+                )
         if not destination.exists():
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
-        segment["image"] = f"assets/images/{source.name}"
+        segment["image"] = f"assets/images/{destination.name}"
 
     def add_segment(slide: SlideData, **extra):
         segment = {
