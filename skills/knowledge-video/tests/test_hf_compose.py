@@ -273,3 +273,53 @@ def test_collect_hf_segments_preserves_conflicting_existing_output(tmp_path):
     assert segments[0]["image"] != "assets/images/photo.png"
     assert existing.read_bytes() == b"existing"
     assert (hf_dir / segments[0]["image"]).read_bytes() == b"source"
+
+
+def test_compose_hf_html_builds_deterministic_timed_scenes_with_audio_and_image():
+    timeline = {
+        "total_duration": 8.5,
+        "segments": [
+            {
+                "index": 0,
+                "type": "title",
+                "start": 0.0,
+                "duration": 3.0,
+                "slide_title": "开场",
+                "subtitle": "副标题",
+                "narration": "标题旁白",
+            },
+            {
+                "index": 1,
+                "type": "content",
+                "start": 3.0,
+                "duration": 5.5,
+                "slide_title": "内容",
+                "text": "要点",
+                "narration": "内容旁白",
+                "image": "assets/images/content.png",
+            },
+        ],
+    }
+
+    document = knowledge_video.compose_hf_html(timeline)
+
+    assert document == knowledge_video.compose_hf_html(timeline)
+    assert 'https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js' in document
+    assert '<main class="bg" data-duration="8.5">' in document
+    assert '<audio id="narration" src="assets/narration.mp3"></audio>' in document
+    assert document.count('<section class="clip scene scene-') == 2
+    assert 'data-start="0.0" data-duration="3.0"' in document
+    assert 'data-start="3.0" data-duration="5.5"' in document
+    assert '<img src="assets/images/content.png" alt="">' in document
+    assert '@font-face' in document and 'src:local(' in document
+    assert '1920px' in document and '1080px' in document
+    assert '.bg' in document and '.scene' in document and '.amber' in document
+    assert '.split' in document and '.center-col' in document and '.checks' in document
+    assert '.progress' in document
+    assert 'window.__timelines = ' in document
+    assert 'gsap.timeline({ paused: true })' in document
+    assert 'autoAlpha' in document and 'stagger: 0.4' in document
+    assert 'window.__timelines["main"] = tl;' in document
+    assert 'Date.now' not in document
+    assert 'Math.random' not in document
+    assert 'fetch(' not in document

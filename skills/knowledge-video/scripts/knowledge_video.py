@@ -167,6 +167,70 @@ def _hf_scene_summary(seg, accent) -> str:
     return f'<div class="{layout}">{copy}{image_html}</div>'
 
 
+def _hf_build_css() -> str:
+    """Return the fixed HyperFrames composition styles."""
+    return """\
+@font-face{font-family:KnowledgeVideo;src:local("PingFang SC"),local("Microsoft YaHei");}
+*{box-sizing:border-box}body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#080b12;color:#f8fafc;font-family:KnowledgeVideo,sans-serif}
+.bg{position:relative;width:1920px;height:1080px;overflow:hidden;background:radial-gradient(circle at 20% 20%,#1e293b,#080b12 55%)}
+.scene{position:absolute;inset:0;display:flex;align-items:center;padding:110px 150px;opacity:0;visibility:hidden}
+.scene-title,.center-col{width:100%;max-width:1300px;margin:auto;text-align:center}.scene-content,.scene-summary{width:100%;display:flex;align-items:center;gap:72px}.scene-copy{flex:1}.split{display:grid;grid-template-columns:1fr 1fr;gap:72px}.split-layout{display:flex;gap:72px}.scene-image{flex:1}.scene-image img{display:block;width:100%;max-height:620px;object-fit:cover;border-radius:12px}
+.kicker{font-size:30px;color:var(--accent);margin-bottom:28px}.hero-title{font-size:84px;line-height:1.18;font-weight:700}.hero-sub{font-size:42px;margin-top:26px;color:#cbd5e1}.lead{font-size:62px;line-height:1.25;font-weight:700}.sub-desc{font-size:28px;line-height:1.6;color:#94a3b8;margin-top:34px}.scene-number{font-size:120px;font-weight:700;color:rgba(255,255,255,.08);margin-bottom:20px}.amber{color:#fbbf24}.checks{display:grid;gap:22px;margin-top:46px}.check-row{display:flex;gap:16px;font-size:34px;line-height:1.4}.check-mark{color:var(--accent);font-weight:700}.progress{position:absolute;left:150px;right:150px;bottom:62px;height:6px;background:rgba(255,255,255,.16)}.progress-fill{width:100%;height:100%;background:#fbbf24;transform:scaleX(0);transform-origin:left}
+"""
+
+
+def _hf_build_script(segments, total) -> str:
+    """Return the deterministic GSAP animation timeline for the composition."""
+    _ = segments
+    return f"""\
+<script>
+window.__timelines = window.__timelines || {{}};
+const tl = gsap.timeline({{ paused: true }});
+const totalDuration = {total};
+document.querySelectorAll(".scene").forEach((scene) => {{
+  const start = Number(scene.dataset.start);
+  const duration = Number(scene.dataset.duration);
+  const inward = scene.querySelectorAll(".scene-title > *, .scene-copy > *, .scene-image");
+  tl.fromTo(scene, {{ autoAlpha: 0 }}, {{ autoAlpha: 1, duration: 0.4 }}, start);
+  tl.fromTo(inward, {{ autoAlpha: 0, y: 32 }}, {{ autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.4 }}, start);
+  tl.to(scene, {{ autoAlpha: 0, duration: 0.4 }}, start + duration - 0.4);
+}});
+tl.to(".progress-fill", {{ scaleX: 1, duration: totalDuration, ease: "none" }}, 0);
+window.__timelines["main"] = tl;
+</script>"""
+
+
+def compose_hf_html(timeline) -> str:
+    """Compose deterministic HyperFrames HTML from the prepared audio timeline."""
+    segments = timeline.get("segments", [])
+    total = timeline.get("total_duration", 0)
+    builders = {
+        "title": _hf_scene_title,
+        "content": _hf_scene_content,
+        "summary": _hf_scene_summary,
+    }
+    scenes = []
+    for index, segment in enumerate(segments):
+        scene_type = segment.get("type", "content")
+        accent = ACCENT_PALETTE[index % len(ACCENT_PALETTE)]["main"]
+        builder = builders.get(scene_type, _hf_scene_content)
+        scenes.append(
+            f'<section class="clip scene scene-{_hf_escape(scene_type)}" '
+            f'data-start="{segment.get("start", 0)}" '
+            f'data-duration="{segment.get("duration", 0)}" '
+            f'style="--accent:{accent}">{builder(segment, accent)}</section>'
+        )
+    return (
+        '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n'
+        '<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>\n'
+        f'<style>{_hf_build_css()}</style>\n</head>\n<body>\n'
+        f'<main class="bg" data-duration="{total}">{"".join(scenes)}'
+        '<div class="progress"><div class="progress-fill"></div></div></main>\n'
+        '<audio id="narration" src="assets/narration.mp3"></audio>\n'
+        f'{_hf_build_script(segments, total)}\n</body>\n</html>'
+    )
+
+
 def _render_text(text: str) -> str:
     """Escape HTML, converting ==text== to accent-highlighted spans."""
     parts = re.split(r'(==.+?==)', text)
