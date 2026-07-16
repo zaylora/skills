@@ -114,6 +114,59 @@ def _hf_render_highlight(s: str) -> str:
     )
 
 
+def _hf_scene_title(seg, accent) -> str:
+    """Render the internal HTML for a HyperFrames title scene."""
+    _ = accent
+    return (
+        '<div class="scene-title">'
+        f'<div class="kicker">{_hf_escape(seg.get("icon", ""))}</div>'
+        f'<div class="hero-title">{_hf_render_highlight(seg.get("slide_title", ""))}</div>'
+        f'<div class="hero-sub">{_hf_render_highlight(seg.get("subtitle", ""))}</div>'
+        f'<div class="sub-desc">{_hf_render_highlight(seg.get("narration", ""))}</div>'
+        '</div>'
+    )
+
+
+def _hf_scene_content(seg, accent) -> str:
+    """Render the internal HTML for one HyperFrames content scene."""
+    _ = accent
+    image = seg.get("image", "")
+    layout = "scene-content split-layout" if image else "scene-content"
+    copy = (
+        '<div class="scene-copy">'
+        f'<div class="kicker">{_hf_render_highlight(seg.get("slide_title", ""))}</div>'
+        f'<div class="scene-number">{seg.get("index", 0) + 1:02d}</div>'
+        f'<div class="lead">{_hf_render_highlight(seg.get("text", ""))}</div>'
+        f'<div class="sub-desc">{_hf_render_highlight(seg.get("narration", ""))}</div>'
+        '</div>'
+    )
+    image_html = f'<div class="scene-image"><img src="{_hf_escape(image)}" alt=""></div>' if image else ""
+    return f'<div class="{layout}">{copy}{image_html}</div>'
+
+
+def _hf_scene_summary(seg, accent) -> str:
+    """Render the internal HTML for a HyperFrames summary scene."""
+    _ = accent
+    image = seg.get("image", "")
+    layout = "scene-summary split-layout" if image else "scene-summary"
+    points = "".join(
+        '<div class="check-row">'
+        '<span class="check-mark">&#10003;</span>'
+        f'<span>{_hf_render_highlight(point)}</span>'
+        '</div>'
+        for point in seg.get("points", [])
+    )
+    copy = (
+        '<div class="scene-copy">'
+        f'<div class="hero-title">{_hf_render_highlight(seg.get("slide_title", ""))}</div>'
+        f'<div class="checks">{points}</div>'
+        f'<div class="sub-desc">{_hf_render_highlight(seg.get("narration", ""))}</div>'
+        '</div>'
+    )
+    image_html = f'<div class="scene-image"><img src="{_hf_escape(image)}" alt=""></div>' if image else ""
+    return f'<div class="{layout}">{copy}{image_html}</div>'
+
+
 def _render_text(text: str) -> str:
     """Escape HTML, converting ==text== to accent-highlighted spans."""
     parts = re.split(r'(==.+?==)', text)

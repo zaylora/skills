@@ -49,6 +49,67 @@ def test_hf_helpers_treat_none_as_an_empty_string():
     assert knowledge_video._hf_render_highlight(None) == ""
 
 
+def test_hf_scene_title_renders_icon_title_subtitle_and_highlighted_text():
+    scene = knowledge_video._hf_scene_title({
+        "icon": "<星>",
+        "slide_title": "==知识== <开场>",
+        "subtitle": "副标题 ==重点==",
+        "narration": "旁白 <内容>",
+    }, {"main": "#38bdf8"})
+
+    assert '<div class="kicker">&lt;星&gt;</div>' in scene
+    assert '<div class="hero-title"><span class="amber">知识</span> &lt;开场&gt;</div>' in scene
+    assert '<div class="hero-sub">副标题 <span class="amber">重点</span></div>' in scene
+    assert '<div class="sub-desc">旁白 &lt;内容&gt;</div>' in scene
+
+
+def test_hf_scene_content_renders_text_layout_without_image():
+    scene = knowledge_video._hf_scene_content({
+        "index": 0,
+        "slide_title": "章节 ==标题==",
+        "text": "要点 <一>",
+        "narration": "说明 ==重点==",
+    }, {"main": "#38bdf8"})
+
+    assert '<div class="kicker">章节 <span class="amber">标题</span></div>' in scene
+    assert '<div class="scene-number">01</div>' in scene
+    assert '<div class="lead">要点 &lt;一&gt;</div>' in scene
+    assert '<div class="sub-desc">说明 <span class="amber">重点</span></div>' in scene
+    assert "<img" not in scene
+
+
+def test_hf_scene_content_renders_split_layout_with_image():
+    scene = knowledge_video._hf_scene_content({
+        "index": 9,
+        "slide_title": "章节",
+        "text": "要点",
+        "narration": "说明",
+        "image": 'assets/<image>.png',
+    }, {"main": "#38bdf8"})
+
+    assert 'class="scene-content split-layout"' in scene
+    assert '<div class="scene-number">10</div>' in scene
+    assert '<img src="assets/&lt;image&gt;.png" alt="">' in scene
+
+
+def test_hf_scene_summary_renders_each_point_with_a_check_mark_and_image():
+    scene = knowledge_video._hf_scene_summary({
+        "slide_title": "==总结==",
+        "points": ["第一 <点>", "第二 ==重点=="],
+        "narration": "收束旁白",
+        "image": "assets/summary.png",
+    }, {"main": "#38bdf8"})
+
+    assert 'class="scene-summary split-layout"' in scene
+    assert '<div class="hero-title"><span class="amber">总结</span></div>' in scene
+    assert scene.count('class="check-mark"') == 2
+    assert '<span class="check-mark">&#10003;</span>' in scene
+    assert '<span>第一 &lt;点&gt;</span>' in scene
+    assert '<span>第二 <span class="amber">重点</span></span>' in scene
+    assert '<div class="sub-desc">收束旁白</div>' in scene
+    assert '<img src="assets/summary.png" alt="">' in scene
+
+
 def test_collect_hf_segments_enumerates_title_content_and_summary(tmp_path):
     slides = [
         knowledge_video.SlideData(
