@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>小黑的审批回路</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="assets/story-video/handdraw.js"></script>
+    <script src="assets/story-video/xiaohei.js"></script>
+    <script src="assets/story-video/microactions.js"></script>
+    <script src="assets/story-video/props.js"></script>
+    <style>
+      @font-face {
+        font-family: "StoryVideoSans";
+        src: local("Microsoft YaHei"), local("PingFang SC"), local("Hiragino Sans GB");
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+      }
+
+      * {
+        box-sizing: border-box;
+        letter-spacing: 0;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: #ffffff;
+        color: #1a1a1a;
+        font-family: "StoryVideoSans", sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      #scene1 {
+        z-index: 1;
+      }
+
+      #scene2 {
+        z-index: 2;
+      }
+
+      .camera {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        transform: translate(var(--fixture-x), var(--fixture-y)) scale(var(--fixture-scale));
+        transform-origin: center center;
+      }
+
+      #s1-camera {
+        --fixture-x: 0px;
+        --fixture-y: 0px;
+        --fixture-scale: 1;
+      }
+
+      #s2-camera {
+        --fixture-x: -24px;
+        --fixture-y: 0px;
+        --fixture-scale: 1.02;
+      }
+
+      .character-layer,
+      .props-layer,
+      .bubble-layer,
+      .annotation-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .caption-layer {
+        position: absolute;
+        left: 220px;
+        right: 220px;
+        bottom: 74px;
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1.35;
+        text-align: center;
+      }
+
+      .actor {
+        position: absolute;
+        width: 180px;
+        height: 270px;
+        color: #1a1a1a;
+        transform: translate(-50%, -50%) scale(var(--fixture-scale));
+        transform-origin: center center;
+      }
+
+      .actor svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .actor .xh-root {
+        filter: none;
+      }
+
+      .actor [class^="xh-arm"],
+      .actor [class^="xh-leg"] {
+        stroke-width: 2.2;
+      }
+
+      #s1-character {
+        left: 470px;
+        top: 390px;
+        --fixture-scale: 1.6;
+      }
+
+      #s2-character {
+        left: 430px;
+        top: 400px;
+        --fixture-scale: 1.6;
+      }
+
+      .prop {
+        position: absolute;
+        width: 160px;
+        height: 160px;
+        color: #1a1a1a;
+        transform: translate(-50%, -50%) scale(var(--fixture-scale));
+        transform-origin: center center;
+      }
+
+      .prop svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #s1-laptop {
+        left: 1190px;
+        top: 455px;
+        --fixture-scale: 1.7;
+      }
+
+      #s1-gear {
+        left: 1510px;
+        top: 455px;
+        --fixture-scale: 1.2;
+      }
+
+      #s2-loop {
+        left: 1135px;
+        top: 420px;
+        --fixture-scale: 2;
+        color: #e2483d;
+      }
+
+      #s2-mailbox {
+        left: 1490px;
+        top: 455px;
+        --fixture-scale: 1.45;
+      }
+
+      .bubble {
+        position: absolute;
+        max-width: 430px;
+        padding: 24px 30px;
+        border: 2.2px solid #1a1a1a;
+        border-radius: 28px;
+        background: #ffffff;
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+
+      .bubble::after {
+        content: "";
+        position: absolute;
+        bottom: -16px;
+        width: 26px;
+        height: 26px;
+        background: #ffffff;
+        border-right: 2.2px solid #1a1a1a;
+        border-bottom: 2.2px solid #1a1a1a;
+        transform: rotate(45deg);
+      }
+
+      #s1-bubble {
+        left: 530px;
+        top: 205px;
+      }
+
+      #s1-bubble::after,
+      #s2-bubble::after {
+        left: 48px;
+      }
+
+      #s2-bubble {
+        left: 500px;
+        top: 205px;
+      }
+
+      .story-heading {
+        position: absolute;
+        left: 150px;
+        top: 90px;
+        font-size: 68px;
+        font-weight: 900;
+        line-height: 1.15;
+      }
+
+      .annotation {
+        position: absolute;
+        padding-bottom: 8px;
+        border-bottom: 2.2px solid currentColor;
+        font-size: 30px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      #s1-annotation {
+        left: 1190px;
+        top: 316px;
+        color: #2f7dd1;
+      }
+
+      #s2-annotation {
+        left: 1110px;
+        top: 280px;
+        max-width: 400px;
+        color: #e2483d;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-width="1920"
+      data-height="1080"
+      data-start="0"
+      data-duration="9.6"
+    >
+      <div id="scene1" class="scene">
+        <div id="s1-camera" class="camera" data-layout-allow-overflow>
+          <div class="character-layer">
+            <div id="s1-character" class="actor" aria-label="正面小黑"></div>
+          </div>
+          <div class="props-layer">
+            <div id="s1-laptop" class="prop" aria-label="笔记本道具"></div>
+            <div id="s1-gear" class="prop" aria-label="齿轮道具"></div>
+          </div>
+          <div class="bubble-layer">
+            <div id="s1-bubble" class="bubble">我来推进一下。</div>
+          </div>
+          <div class="annotation-layer">
+            <div id="s1-heading" class="story-heading">小黑的审批回路</div>
+            <div id="s1-annotation" class="annotation">流程开始</div>
+          </div>
+        </div>
+        <div id="s1-caption" class="caption-layer">小黑认真接过了流程。</div>
+      </div>
+
+      <div id="scene2" class="scene" style="opacity: 0">
+        <div id="s2-camera" class="camera" data-layout-allow-overflow>
+          <div class="character-layer">
+            <div id="s2-character" class="actor" aria-label="侧面小黑"></div>
+          </div>
+          <div class="props-layer">
+            <div id="s2-loop" class="prop" aria-label="循环道具"></div>
+            <div id="s2-mailbox" class="prop" aria-label="邮箱道具"></div>
+          </div>
+          <div class="bubble-layer">
+            <div id="s2-bubble" class="bubble">怎么又回到我这里？</div>
+          </div>
+          <div class="annotation-layer">
+            <div id="s2-annotation" class="annotation">系统已成功回到原点</div>
+          </div>
+        </div>
+        <div id="s2-caption" class="caption-layer">流程运行得很顺利，只是没有向前。</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var xiaohei = window.StoryVideo.xiaohei;
+      var props = window.StoryVideo.props;
+      var microactions = window.StoryVideo.microactions;
+
+      var frontActor = xiaohei.spawn(document.getElementById("s1-character"), "worker-front");
+      var sideActor = xiaohei.spawnSide(document.getElementById("s2-character"), "worker-side");
+      document.getElementById("s1-laptop").innerHTML = props.render("laptop", { seed: "shot-1-laptop" });
+      document.getElementById("s1-gear").innerHTML = props.render("gear", { seed: "shot-1-gear" });
+      document.getElementById("s2-loop").innerHTML = props.render("loop", { seed: "shot-2-loop" });
+      document.getElementById("s2-mailbox").innerHTML = props.render("mailbox", { seed: "shot-2-mailbox" });
+
+      var tl = gsap.timeline({ paused: true });
+
+      tl.from("#s1-camera", { opacity: 0, duration: 0.7, ease: "power2.out" }, 0.2);
+      tl.from("#s1-character", { x: -80, opacity: 0, duration: 0.65, ease: "power3.out" }, 0.2);
+      tl.from("#s1-laptop", { y: 55, opacity: 0, duration: 0.6, ease: "back.out(1.5)" }, 0.4);
+      tl.from("#s1-gear", { y: 55, opacity: 0, duration: 0.5, ease: "back.out(1.5)" }, 0.7);
+      tl.from("#s1-heading", { y: -32, opacity: 0, duration: 0.6, ease: "expo.out" }, 0.28);
+      tl.from("#s1-annotation", { scaleX: 0.4, opacity: 0, transformOrigin: "left center", duration: 0.5, ease: "power2.out" }, 0.6);
+      tl.from("#s1-bubble", { scale: 0.86, opacity: 0, transformOrigin: "left bottom", duration: 0.45, ease: "back.out(1.8)" }, 1.1);
+      tl.from("#s1-caption", { y: 26, opacity: 0, duration: 0.5, ease: "sine.out" }, 0.82);
+      microactions.wave(tl, frontActor, { at: 0.8, duration: 1.1, direction: 1 });
+
+      tl.to("#scene1", { x: -1920, duration: 0.5, ease: "power3.inOut" }, 4.6);
+      tl.fromTo("#scene2", { x: 1920, opacity: 1 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.inOut" }, 4.6);
+
+      tl.from("#s2-camera", { opacity: 0, duration: 0.8, ease: "power2.out" }, 4.8);
+      tl.from("#s2-character", { x: -75, opacity: 0, duration: 0.65, ease: "power3.out" }, 4.9);
+      tl.from("#s2-loop", { y: -44, opacity: 0, duration: 0.6, ease: "back.out(1.4)" }, 5);
+      tl.from("#s2-mailbox", { y: -44, opacity: 0, duration: 0.5, ease: "back.out(1.4)" }, 5.3);
+      tl.from("#s2-annotation", { scaleX: 0.45, opacity: 0, transformOrigin: "left center", duration: 0.5, ease: "expo.out" }, 5.5);
+      tl.from("#s2-bubble", { scale: 0.86, opacity: 0, transformOrigin: "left bottom", duration: 0.45, ease: "back.out(1.8)" }, 5.9);
+      tl.from("#s2-caption", { y: 28, opacity: 0, duration: 0.5, ease: "sine.out" }, 5.15);
+      microactions.walkCycle(tl, sideActor, { at: 5.3, duration: 1.6, direction: 1 });
+
+      window.__timelines.main = tl;
+    </script>
+  </body>
+</html>

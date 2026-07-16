@@ -1,0 +1,4 @@
+interface:
+  display_name: "Story Video"
+  short_description: "将故事主题制作成小黑手绘风格的静音 16:9 动画视频"
+  default_prompt: "使用 $story-video 把一个故事主题制作成小黑手绘风格的静音 16:9 动画视频。"

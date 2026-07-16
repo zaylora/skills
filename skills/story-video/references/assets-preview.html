@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Story Video 资产视觉回归</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="../assets/handdraw.js"></script>
+    <script src="../assets/xiaohei.js"></script>
+    <script src="../assets/microactions.js"></script>
+    <script src="../assets/props.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        letter-spacing: 0;
+      }
+
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: #1a1a1a;
+        font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+        font-size: 20px;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(1440px, calc(100% - 64px));
+        margin: 0 auto;
+        padding: 64px 0 96px;
+      }
+
+      h1 {
+        margin: 0 0 56px;
+        font-size: 64px;
+        line-height: 1.15;
+        font-weight: 900;
+      }
+
+      h2 {
+        margin: 64px 0 24px;
+        font-size: 38px;
+        line-height: 1.25;
+      }
+
+      .view-grid,
+      .action-grid,
+      .prop-grid {
+        display: grid;
+        gap: 20px;
+      }
+
+      .view-grid {
+        grid-template-columns: repeat(2, minmax(0, 320px));
+      }
+
+      .action-grid {
+        grid-template-columns: repeat(4, minmax(220px, 1fr));
+      }
+
+      .prop-grid {
+        grid-template-columns: repeat(8, minmax(120px, 1fr));
+      }
+
+      .asset-card {
+        min-width: 0;
+        border: 1px solid #d8d8d8;
+        border-radius: 6px;
+        padding: 20px;
+        background: #ffffff;
+      }
+
+      .actor-stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 240px;
+        color: #1a1a1a;
+      }
+
+      .actor-stage svg {
+        display: block;
+        width: 150px;
+        height: 225px;
+        overflow: visible;
+      }
+
+      .actor-stage .xh-root {
+        filter: none;
+      }
+
+      .actor-stage [class^="xh-arm"],
+      .actor-stage [class^="xh-leg"] {
+        stroke-width: 2.2;
+      }
+
+      .asset-name {
+        margin-top: 12px;
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      .asset-description {
+        min-height: 60px;
+        margin-top: 6px;
+        color: #4d4d4d;
+        font-size: 20px;
+      }
+
+      .prop-stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 120px;
+        color: #1a1a1a;
+      }
+
+      .prop-stage svg {
+        display: block;
+        width: 100px;
+        height: 100px;
+      }
+
+      .prop-card .asset-name {
+        overflow-wrap: anywhere;
+        text-align: center;
+      }
+
+      @media (max-width: 1100px) {
+        .action-grid {
+          grid-template-columns: repeat(2, minmax(220px, 1fr));
+        }
+
+        .prop-grid {
+          grid-template-columns: repeat(4, minmax(120px, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 32px, 1440px);
+          padding-top: 40px;
+        }
+
+        h1 {
+          font-size: 60px;
+        }
+
+        .view-grid,
+        .action-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .prop-grid {
+          grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Story Video 资产视觉回归</h1>
+
+      <section aria-labelledby="views-heading">
+        <h2 id="views-heading">角色视角</h2>
+        <div class="view-grid">
+          <div class="asset-card">
+            <div id="front-view" class="actor-stage"></div>
+            <div class="asset-name">front</div>
+            <div class="asset-description">正面双白点眼，用于状态、对话与说明。</div>
+          </div>
+          <div class="asset-card">
+            <div id="side-view" class="actor-stage"></div>
+            <div class="asset-name">side</div>
+            <div class="asset-description">侧面单白点眼，用于行走、旅程与流程推进。</div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="actions-heading">
+        <h2 id="actions-heading">8 个微动作</h2>
+        <div id="action-grid" class="action-grid"></div>
+      </section>
+
+      <section aria-labelledby="props-heading">
+        <h2 id="props-heading">32 个道具</h2>
+        <div id="prop-grid" class="prop-grid"></div>
+      </section>
+    </main>
+
+    <script>
+      var xiaohei = window.StoryVideo.xiaohei;
+      var microactions = window.StoryVideo.microactions;
+      var props = window.StoryVideo.props;
+
+      var ACTIONS = [
+        { id: "idle", description: "有限时长的呼吸与眨眼，表示认真等待。" },
+        { id: "blink", description: "一次短眨眼，用于自然停顿。" },
+        { id: "wave", description: "单臂挥手，用于接手或确认。" },
+        { id: "walk", description: "有限步态，用于沿流程移动。" },
+        { id: "nod", description: "身体下压再复位，用于确认。" },
+        { id: "jump", description: "短促起跳与落地，用于结果强调。" },
+        { id: "think", description: "抬臂与问号出现，用于思考。" },
+        { id: "surprise", description: "眼睛、手臂与身体同步反应。" }
+      ];
+
+      xiaohei.spawn(document.getElementById("front-view"), "preview-front");
+      xiaohei.spawnSide(document.getElementById("side-view"), "preview-side");
+
+      ACTIONS.forEach(function (action, index) {
+        var card = document.createElement("div");
+        card.className = "asset-card";
+        var stage = document.createElement("div");
+        stage.className = "actor-stage";
+        stage.id = "action-" + action.id;
+        var name = document.createElement("div");
+        name.className = "asset-name";
+        name.textContent = action.id;
+        var description = document.createElement("div");
+        description.className = "asset-description";
+        description.textContent = action.description;
+        card.appendChild(stage);
+        card.appendChild(name);
+        card.appendChild(description);
+        document.getElementById("action-grid").appendChild(card);
+
+        var actor = action.id === "walk"
+          ? xiaohei.spawnSide(stage, "action-demo-" + action.id)
+          : xiaohei.spawn(stage, "action-demo-" + action.id);
+        var demoTimeline = gsap.timeline({ delay: index * 0.08, repeat: 0 });
+        microactions.dispatch(action.id, demoTimeline, actor, {
+          at: 0.25,
+          duration: 1.4,
+          direction: 1
+        });
+      });
+
+      props.list().forEach(function (id) {
+        var card = document.createElement("div");
+        card.className = "asset-card prop-card";
+        var stage = document.createElement("div");
+        stage.className = "prop-stage";
+        stage.innerHTML = props.render(id, { seed: "preview:" + id });
+        var name = document.createElement("div");
+        name.className = "asset-name";
+        name.textContent = id;
+        card.appendChild(stage);
+        card.appendChild(name);
+        document.getElementById("prop-grid").appendChild(card);
+      });
+    </script>
+  </body>
+</html>

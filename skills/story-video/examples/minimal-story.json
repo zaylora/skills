@@ -1,0 +1,118 @@
+{
+  "title": "小黑的审批回路",
+  "aspect": "16:9",
+  "shots": [
+    {
+      "id": "shot-1",
+      "duration": 4.6,
+      "pattern": "process",
+      "character": {
+        "id": "worker-front",
+        "view": "front",
+        "action": "wave",
+        "x": 470,
+        "y": 390,
+        "scale": 1.6,
+        "at": 0.8,
+        "dur": 1.1
+      },
+      "props": [
+        {
+          "id": "laptop",
+          "x": 1190,
+          "y": 455,
+          "scale": 1.7,
+          "at": 0.4,
+          "dur": 0.6,
+          "seed": "shot-1-laptop"
+        },
+        {
+          "id": "gear",
+          "x": 1510,
+          "y": 455,
+          "scale": 1.2,
+          "at": 0.7,
+          "dur": 0.5,
+          "seed": "shot-1-gear"
+        }
+      ],
+      "bubble": {
+        "text": "我来推进一下。",
+        "anchor": "worker-front",
+        "at": 1.1,
+        "dur": 2.4
+      },
+      "annotation": {
+        "text": "流程开始",
+        "color": "#2f7dd1",
+        "at": 0.6,
+        "dur": 3.0
+      },
+      "caption": "小黑认真接过了流程。",
+      "camera": {
+        "x": 0,
+        "y": 0,
+        "scale": 1,
+        "at": 0.2,
+        "dur": 0.7,
+        "ease": "power2.out"
+      }
+    },
+    {
+      "id": "shot-2",
+      "duration": 5.0,
+      "pattern": "cause-effect",
+      "character": {
+        "id": "worker-side",
+        "view": "side",
+        "action": "walk",
+        "x": 430,
+        "y": 400,
+        "scale": 1.6,
+        "at": 0.7,
+        "dur": 1.6
+      },
+      "props": [
+        {
+          "id": "loop",
+          "x": 1135,
+          "y": 420,
+          "scale": 2.0,
+          "at": 0.4,
+          "dur": 0.6,
+          "seed": "shot-2-loop"
+        },
+        {
+          "id": "mailbox",
+          "x": 1490,
+          "y": 455,
+          "scale": 1.45,
+          "at": 0.7,
+          "dur": 0.5,
+          "seed": "shot-2-mailbox"
+        }
+      ],
+      "bubble": {
+        "text": "怎么又回到我这里？",
+        "anchor": "worker-side",
+        "at": 1.3,
+        "dur": 2.5
+      },
+      "annotation": {
+        "text": "系统已成功回到原点",
+        "color": "#e2483d",
+        "at": 0.9,
+        "dur": 3.2
+      },
+      "caption": "流程运行得很顺利，只是没有向前。",
+      "camera": {
+        "x": -24,
+        "y": 0,
+        "scale": 1.02,
+        "at": 0.2,
+        "dur": 0.8,
+        "ease": "power2.out"
+      }
+    }
+  ]
+}
