@@ -1294,7 +1294,23 @@ def cmd_hf_prepare(args):
 
     print(f"  ✓ 旁白轨 → {narration}  （{total}s，{n} 段拼接）")
     print(f"  ✓ 时间轴 → {hf_dir / 'timeline.json'}")
-    print(f"  下一步：运行 hf-compose --timeline {hf_dir / 'timeline.json'} --hf-dir {hf_dir}")
+    print(f"  下一步：运行 hf-compose --hf-dir {hf_dir}")
+
+
+def cmd_hf_compose(args):
+    """从 HyperFrames 时间轴生成 composition HTML。"""
+    hf_dir = Path(args.hf_dir)
+    timeline_path = hf_dir / "timeline.json"
+    if not timeline_path.is_file():
+        sys.exit(f"错误：timeline.json 不存在：{timeline_path}")
+
+    timeline = json.loads(timeline_path.read_text(encoding="utf-8"))
+    if not timeline.get("segments"):
+        sys.exit(f"错误：timeline.json 不包含场景：{timeline_path}")
+
+    output = hf_dir / "index.html"
+    output.write_text(compose_hf_html(timeline), encoding="utf-8")
+    print(f"已生成 composition: {output} ({len(timeline['segments'])} 个场景)")
 
 
 def main():
@@ -1343,6 +1359,11 @@ def main():
     p.add_argument("--hf-dir", required=True,
                    help="hyperframes 项目目录（输出 assets/narration.mp3 + timeline.json）")
 
+    p = sub.add_parser("hf-compose",
+                       help="timeline.json → index.html（hyperframes composition）")
+    p.add_argument("--hf-dir", required=True,
+                   help="hyperframes 项目目录（读取 timeline.json，输出 index.html）")
+
     args = parser.parse_args()
     dispatch = {
         "render": cmd_render,
@@ -1351,6 +1372,7 @@ def main():
         "xskill-voices": cmd_xskill_voices,
         "assemble": cmd_assemble,
         "hf-prepare": cmd_hf_prepare,
+        "hf-compose": cmd_hf_compose,
     }
     fn = dispatch.get(args.cmd)
     if fn:

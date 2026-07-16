@@ -1,6 +1,8 @@
 import argparse
 import importlib.util
 import json
+import subprocess
+import sys
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -388,3 +390,56 @@ def test_compose_hf_html_builds_deterministic_timed_scenes_with_audio_and_image(
     assert 'Date.now' not in document
     assert 'Math.random' not in document
     assert 'fetch(' not in document
+
+
+def test_hf_compose_cli_writes_index_from_timeline(tmp_path):
+    hf_dir = tmp_path / "hf"
+    hf_dir.mkdir()
+    (hf_dir / "timeline.json").write_text(json.dumps({
+        "total_duration": 3.0,
+        "segments": [{
+            "index": 0,
+            "type": "title",
+            "start": 0.0,
+            "duration": 3.0,
+            "slide_title": "开场",
+            "narration": "旁白",
+        }],
+    }, ensure_ascii=False), encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, str(_SCRIPT), "hf-compose", "--hf-dir", str(hf_dir)],
+        capture_output=True, text=True, check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (hf_dir / "index.html").read_text(encoding="utf-8") == (
+        knowledge_video.compose_hf_html(json.loads(
+            (hf_dir / "timeline.json").read_text(encoding="utf-8")
+        ))
+    )
+    assert "1 个场景" in result.stdout
+
+
+def test_hf_compose_cli_exits_when_timeline_is_missing(tmp_path):
+    result = subprocess.run(
+        [sys.executable, str(_SCRIPT), "hf-compose", "--hf-dir", str(tmp_path)],
+        capture_output=True, text=True, check=False,
+    )
+
+    assert result.returncode != 0
+    assert "timeline.json 不存在" in result.stderr
+
+
+def test_hf_compose_cli_exits_when_timeline_has_no_segments(tmp_path):
+    (tmp_path / "timeline.json").write_text(
+        json.dumps({"total_duration": 0, "segments": []}), encoding="utf-8"
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(_SCRIPT), "hf-compose", "--hf-dir", str(tmp_path)],
+        capture_output=True, text=True, check=False,
+    )
+
+    assert result.returncode != 0
+    assert "timeline.json 不包含场景" in result.stderr
